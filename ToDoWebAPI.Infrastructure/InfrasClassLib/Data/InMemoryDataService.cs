@@ -42,7 +42,11 @@ namespace InfrasClassLib.Data
         {
             try
             {
-                _toDoList[userId].Add(updateDto);
+                _toDoList.AddOrUpdate(userId,
+                // If the key does not exist, initialize a new list and add the task
+                key => new List<ToDo> { updateDto },
+                // If the key already exists, update the list by adding the new task
+                (key, existingList) => { existingList.Add(updateDto); return existingList; });
 
                 return true;
             }
@@ -70,6 +74,31 @@ namespace InfrasClassLib.Data
                 return true;
             }
             catch(Exception ex) 
+            {
+                return false;
+            }
+        }
+
+        public static bool DeleteByUserIdByToDoID(string userId, int toDoId)
+        {
+            try
+            {
+                if (_toDoList.ContainsKey(userId))
+                {
+                    var userToDoList = _toDoList[userId];
+                    var taskToRemoveObj = userToDoList.FirstOrDefault(t => t.Id == toDoId);
+
+                    if (taskToRemoveObj != null)
+                    {
+                        // Remove the task
+                        userToDoList.Remove(taskToRemoveObj);
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+            catch (Exception ex)
             {
                 return false;
             }

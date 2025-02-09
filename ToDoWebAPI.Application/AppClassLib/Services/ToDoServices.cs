@@ -1,6 +1,8 @@
 ﻿using AppClassLib.Interfaces;
 using DomainClassLib.Enum;
 using DomainClassLib.Model;
+using DomainClassLib.RequestModel;
+using DomainClassLib.RespondModel;
 using InfrasClassLib.Data;
 using System;
 using System.Collections.Generic;
@@ -19,6 +21,15 @@ namespace AppClassLib.Services
         public GetAllResponseModel GetAll(string userId)
         {
             GetAllResponseModel ret = new GetAllResponseModel();
+
+            #region Validation
+            if (string.IsNullOrEmpty(userId))
+            {
+                ret.ResponseCode = StatusCode.UserIdIsRequired;
+                ret.ResponseMessage = StatusCode.UserIdIsRequired.ToString();
+                return ret;
+            }
+            #endregion
 
             try
             {
@@ -44,28 +55,269 @@ namespace AppClassLib.Services
             }
         }
 
-        public ToDo GetByToDoID(string userId, int toDoId)
+        public GetRespondModel GetByToDoID(string userId, int toDoId)
         {
-            ToDo ret = new ToDo();
+            GetRespondModel ret = new GetRespondModel();
 
-            if (InMemoryDataService.CheckIfRecordExistsByToDoID(userId, toDoId))
+            #region Validation
+            if (string.IsNullOrEmpty(userId))
             {
-                ret = InMemoryDataService.GetByUserIDByToDoID(userId, toDoId);
+                ret.ResponseCode = StatusCode.UserIdIsRequired;
+                ret.ResponseMessage = StatusCode.UserIdIsRequired.ToString();
+                return ret;
             }
 
-            return ret;
-        }
-
-        public bool Update(string userId, ToDo updateDto)
-        {
-            bool isSuccessUpdate = false; 
-
-            if (InMemoryDataService.CheckIfRecordExistsByToDoID(userId, updateDto.Id))
+            if (toDoId == null || toDoId <= 0)
             {
-                isSuccessUpdate = InMemoryDataService.UpdateByUserId(userId, updateDto);
+                ret.ResponseCode = StatusCode.ToDoIDIsRequired;
+                ret.ResponseMessage = StatusCode.ToDoIDIsRequired.ToString();
+                return ret;
             }
+            #endregion
 
-            return isSuccessUpdate;
+            try
+            {
+                if (InMemoryDataService.CheckIfRecordExistsByToDoID(userId, toDoId))
+                {
+                    ret.ToDo = InMemoryDataService.GetByUserIDByToDoID(userId, toDoId);
+                    ret.ResponseCode = StatusCode.Success;
+                    ret.ResponseMessage = StatusCode.Success.ToString();
+                }
+                else {
+                    ret.ResponseCode = StatusCode.ToDoIDNotFound;
+                    ret.ResponseMessage = StatusCode.ToDoIDNotFound.ToString();
+                }
+
+                return ret;
+            }
+            catch (Exception ex)
+            {
+                ret.ResponseCode = StatusCode.SystemError;
+                ret.ResponseMessage = StatusCode.SystemError.ToString();
+
+                return ret;
+            }
         }
+
+        public GetRespondModel Create(CreateRequestModel createRequestModel)
+        {
+            GetRespondModel ret = new GetRespondModel();
+
+            try
+            {
+                #region Validation
+                if (createRequestModel == null)
+                {
+                    ret.ResponseCode = StatusCode.NullObject;
+                    ret.ResponseMessage = StatusCode.NullObject.ToString();
+                    return ret;
+                }
+
+                if (string.IsNullOrEmpty(createRequestModel.Title))
+                {
+                    ret.ResponseCode = StatusCode.ToDoTitleIsRequired;
+                    ret.ResponseMessage = StatusCode.ToDoTitleIsRequired.ToString();
+                    return ret;
+                }
+
+                if (string.IsNullOrEmpty(createRequestModel.CreatedBy))
+                {
+                    ret.ResponseCode = StatusCode.ToDoCreatedByIsRequired;
+                    ret.ResponseMessage = StatusCode.ToDoCreatedByIsRequired.ToString();
+                    return ret;
+                }
+                #endregion
+
+                var userId = createRequestModel.CreatedBy;
+
+                ToDo toDo = new ToDo();
+                int toDoID = 1;
+
+                if (!InMemoryDataService.CheckIfUserExists(userId))
+                {
+                    toDo.Id = toDoID; // always 1 as new user
+                    toDo.Title = createRequestModel.Title;
+                    toDo.Description = createRequestModel.Description;
+                    toDo.CreatedDate = DateTime.Now;
+                    toDo.CreatedBy = createRequestModel.CreatedBy;
+                }
+                else 
+                {
+                    var userToDoList = InMemoryDataService.GetAllByUserID(userId);
+                    toDoID = userToDoList.Count() + 1;
+                    toDo.Id = toDoID;
+                    toDo.Title = createRequestModel.Title;
+                    toDo.Description = createRequestModel.Description;
+                    toDo.CreatedDate = DateTime.Now;
+                    toDo.CreatedBy = createRequestModel.CreatedBy;
+
+                }
+
+                var isSuccess = InMemoryDataService.CreateByUserId(userId, toDo);
+
+                if (isSuccess)
+                {
+                    ret.ToDo = InMemoryDataService.GetByUserIDByToDoID(userId, toDoID);
+                    ret.ResponseCode = StatusCode.Success;
+                    ret.ResponseMessage = StatusCode.Success.ToString();
+                }
+                else
+                {
+                    ret.ResponseCode = StatusCode.FailedToCreateNewToDo;
+                    ret.ResponseMessage = StatusCode.FailedToCreateNewToDo.ToString();
+                }
+
+                return ret;
+            }
+            catch
+            {
+                ret.ResponseCode = StatusCode.SystemError;
+                ret.ResponseMessage = StatusCode.SystemError.ToString();
+
+                return ret;
+            }
+        }
+
+        public GetRespondModel Update(UpdateRequestModel updateRequestModel)
+        {
+            GetRespondModel ret = new GetRespondModel();
+
+            try
+            {
+                #region Validation
+                if (updateRequestModel == null)
+                {
+                    ret.ResponseCode = StatusCode.NullObject;
+                    ret.ResponseMessage = StatusCode.NullObject.ToString();
+                    return ret;
+                }
+
+                if (updateRequestModel.Id  == null || updateRequestModel.Id <= 0)
+                {
+                    ret.ResponseCode = StatusCode.ToDoIDIsRequired;
+                    ret.ResponseMessage = StatusCode.ToDoIDIsRequired.ToString();
+                    return ret;
+                }
+
+                if (string.IsNullOrEmpty(updateRequestModel.Title))
+                {
+                    ret.ResponseCode = StatusCode.ToDoTitleIsRequired;
+                    ret.ResponseMessage = StatusCode.ToDoTitleIsRequired.ToString();
+                    return ret;
+                }
+
+                if (string.IsNullOrEmpty(updateRequestModel.UpdatedBy))
+                {
+                    ret.ResponseCode = StatusCode.ToDoUpdatedByIsRequired;
+                    ret.ResponseMessage = StatusCode.ToDoUpdatedByIsRequired.ToString();
+                    return ret;
+                }
+                #endregion
+
+                var userId = updateRequestModel.UpdatedBy;
+
+                bool isSuccessUpdate = false;
+                int toDoID = 0;
+
+                if (updateRequestModel.Id != null && int.TryParse(updateRequestModel.Id.ToString(), out toDoID))
+                {
+                    if (InMemoryDataService.CheckIfRecordExistsByToDoID(userId, toDoID))
+                    {
+                        var todo = InMemoryDataService.GetByUserIDByToDoID(userId, toDoID);
+
+                        todo.Title = updateRequestModel.Title;
+                        todo.Description = updateRequestModel.Description;
+                        todo.IsCompleted = updateRequestModel.IsCompleted;
+                        todo.UpdatedBy = updateRequestModel.UpdatedBy;
+                        todo.UpdatedDate = DateTime.Now;
+
+                        isSuccessUpdate = InMemoryDataService.UpdateByUserId(userId, todo);
+                    }
+                    else
+                    {
+                        ret.ResponseCode = StatusCode.ToDoIDNotFound;
+                        ret.ResponseMessage = StatusCode.ToDoIDNotFound.ToString();
+                    }
+                }
+
+                if (isSuccessUpdate)
+                {
+                    ret.ToDo = InMemoryDataService.GetByUserIDByToDoID(userId, toDoID);
+                    ret.ResponseCode = StatusCode.Success;
+                    ret.ResponseMessage = StatusCode.Success.ToString();
+                }
+                else
+                {
+                    ret.ResponseCode = StatusCode.FailedToUpdateToDo;
+                    ret.ResponseMessage = StatusCode.FailedToUpdateToDo.ToString();
+                }
+
+                return ret;
+            }
+            catch
+            {
+                ret.ResponseCode = StatusCode.SystemError;
+                ret.ResponseMessage = StatusCode.SystemError.ToString();
+
+                return ret;
+            }
+        }
+
+        public ApiResponse Delete(string userId, int toDoId)
+        {
+            GetRespondModel ret = new GetRespondModel();
+
+            try
+            {
+                #region Validation
+                if (string.IsNullOrEmpty(userId))
+                {
+                    ret.ResponseCode = StatusCode.UserIdIsRequired;
+                    ret.ResponseMessage = StatusCode.UserIdIsRequired.ToString();
+                    return ret;
+                }
+
+                if (toDoId == null || toDoId <= 0)
+                {
+                    ret.ResponseCode = StatusCode.ToDoIDIsRequired;
+                    ret.ResponseMessage = StatusCode.ToDoIDIsRequired.ToString();
+                    return ret;
+                }
+                #endregion
+
+                bool isSuccessDelete = false;
+
+
+                if (InMemoryDataService.CheckIfRecordExistsByToDoID(userId, toDoId))
+                {
+                    isSuccessDelete = InMemoryDataService.DeleteByUserIdByToDoID(userId, toDoId);
+                }
+                    
+                if (isSuccessDelete)
+                {
+                    ret.ResponseCode = StatusCode.Success;
+                    ret.ResponseMessage = StatusCode.Success.ToString();
+                }
+                else
+                {
+                    ret.ResponseCode = StatusCode.FailedToDeleteToDo;
+                    ret.ResponseMessage = StatusCode.FailedToDeleteToDo.ToString();
+                }
+
+                return ret;
+            }
+            catch
+            {
+                ret.ResponseCode = StatusCode.SystemError;
+                ret.ResponseMessage = StatusCode.SystemError.ToString();
+
+                return ret;
+            }
+        }
+
+        #region Private Method
+
+
+        #endregion
     }
 }

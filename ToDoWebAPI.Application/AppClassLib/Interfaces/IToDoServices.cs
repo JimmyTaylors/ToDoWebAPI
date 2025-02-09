@@ -1,4 +1,6 @@
 ﻿using DomainClassLib.Model;
+using DomainClassLib.RequestModel;
+using DomainClassLib.RespondModel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,7 +12,9 @@ namespace AppClassLib.Interfaces
     public interface IToDoServices
     {
         GetAllResponseModel GetAll(string userId);
-        ToDo GetByToDoID(string userId, int toDoId);
-        bool Update(string userId, ToDo updateDto);
+        GetRespondModel GetByToDoID(string userId, int toDoId);
+        GetRespondModel Create(CreateRequestModel createRequestModel);
+        GetRespondModel Update(UpdateRequestModel updateDto);
+        ApiResponse Delete(string userId, int toDoId);
     }
 }
