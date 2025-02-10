@@ -21,20 +21,6 @@ function TodoItem({ task, deleteTaskCallback, moveTaskUpCallback, moveTaskDownCa
                 onClick={() => deleteTaskCallback()}>
                 X
             </button>
-            <button
-                type="button"
-                aria-label="Move task up"
-                className="up-button"
-                onClick={() => moveTaskUpCallback()}>
-                ^
-            </button>
-            <button
-                type="button"
-                aria-label="Move task down"
-                className="down-button"
-                onClick={() => moveTaskDownCallback()}>
-                v
-            </button>
         </li>
     );
 }

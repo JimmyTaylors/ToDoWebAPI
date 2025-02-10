@@ -34,7 +34,21 @@ builder.Services.AddSwaggerGen(
     }
 );
 
+// Step 1: Add CORS policy to services
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowLocalhost", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")  // Allow requests from this origin (your frontend URL)
+              .AllowAnyHeader()                     // Allow any header
+              .AllowAnyMethod();                     // Allow any HTTP method (GET, POST, etc.)
+    });
+});
+
 var app = builder.Build();
+
+// Step 2: Enable CORS middleware
+app.UseCors("AllowLocalhost");  // Apply the policy globally (before routing)
 
 // Configure the HTTP request pipeline.
 
